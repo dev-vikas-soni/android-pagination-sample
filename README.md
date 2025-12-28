@@ -47,3 +47,13 @@ A practical Kotlin Android project demonstrating all major types of pagination u
 - [Official Paging 3 Documentation][web:1]
 - [Paging 3 Best Practices][web:24]
 - [Sample Paging 3 Project on GitHub][web:23][web:25]
+
+
+## 1. The "Magic Number 30" (Default Initial Load Size)
+- **The Problem:** You noticed the first API call requested 30 items even though your pageSize was set to 10. The Cause: In PagingConfig, the property initialLoadSize defaults to 3 times your pageSize. The Logic: This is a performance optimization. The library assumes that when a user first opens a screen, you want to fill the scroll container completely and have a small buffer ready so the user doesn't see a loading spinner the moment they start their first scroll.
+## 2. Aggressive Automatic API Calling (Prefetch Distance)
+- **The Problem:** The app was calling the second and third pages automatically without you even touching the screen. The Cause: The default prefetchDistance is equal to your pageSize (10). The Logic: If your screen is large enough to display 8 or 9 items, and your page size is 10, the library calculates that you are "within 10 items of the end of the list." Since the distance to the end (1 or 2 items) is less than the prefetchDistance (10), it triggers the next page load immediately to ensure a seamless "infinite scroll" experience. The Fix: You need to explicitly set prefetchDistance = 2 or 3 in your PagingConfig to make it less aggressive.
+## 3. The "Infinite Loading" Trigger (Accessing Indices in Keys)
+- **The Problem:** Even with a small prefetchDistance, the library was sometimes loading everything at once. The Cause: In your initial RecipeListScreen (before the fix), you were likely accessing the recipes list inside the key block of the LazyColumn using recipes[index]. The Logic:•In Paging 3, calling recipes[index] is a signal to the library that "the user is looking at this item."•LazyColumn often looks ahead at keys to prepare for animations or layout.•If the key block "touches" recipes[index], the Paging library thinks you are displaying that index. If that index is near the end, it triggers the next page. This often creates a loop where the list grows, the key block looks at the new items, and another page is fetched. The Fix: Using recipes.itemKey { it.id } (which you have now implemented) is the correct way. It retrieves the key from the cached data without sending a "signal" to the Paging library to load more data.
+
+By understanding these three defaults—Initial Multiplyer, Prefetch Distance, and Index Access Signaling—you can fully control when and how your network is hit.
